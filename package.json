@@ -1,0 +1,20 @@
+{
+  "name": "crawler-mercado-livre",
+  "version": "1.0.0",
+  "main": "crawler.ts",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "start": "ts-node crawler.ts"
+  },
+  "author": "",
+  "license": "ISC",
+  "description": "",
+  "devDependencies": {
+    "ts-node": "^10.9.2",
+    "typescript": "^5.4.5"
+  },
+  "dependencies": {
+    "pupeteer": "^0.0.1",
+    "puppeteer": "^22.6.5"
+  }
+}
