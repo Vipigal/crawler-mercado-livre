@@ -117,6 +117,7 @@ async function main() {
     const products: Products[] = [];
 
     let pageNumber = 0;
+    const startScrapingTime = process.hrtime();
     while (true) {
       await page.waitForSelector(".ui-search-results");
       await getItemPrices(pageNumber, page, products);
@@ -173,6 +174,14 @@ async function main() {
       .join("\n");
     fs.writeFileSync(`produtos-mineirados.txt`, productsText);
 
+    const endScrapingTime = process.hrtime(startScrapingTime);
+    console.log(
+      `Scraping took ${endScrapingTime[0]} seconds and ${
+        endScrapingTime[1] / 1e6
+      } milliseconds and has retrieved ${
+        products.length
+      } products. Check the file produtos-mineirados.txt for more information.`
+    );
     await browser.close();
     process.exit(0);
   } catch (e) {
