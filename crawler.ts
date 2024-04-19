@@ -1,10 +1,18 @@
 import puppeteer, { Page } from "puppeteer";
 const fs = require("fs");
 
-interface Products {
-  price?: string;
-  link?: string | null;
-}
+type Products =
+  | {
+      price: string;
+      link: string | null;
+      hasDiscount: false;
+    }
+  | {
+      originalPrice: string;
+      link: string | null;
+      discountPrice: string;
+      hasDiscount: true;
+    };
 
 function imprimeErro(e: unknown) {
   console.log(e);
@@ -22,15 +30,56 @@ async function getItemPrices(
   }
 
   for (const item of itemList) {
-    const priceSpan = await item.$(".andes-money-amount__fraction");
-    const price = (await priceSpan?.evaluate((el) => el.innerHTML)) || "";
+    const price = await item.$(".ui-search-price__second-line");
+    const realPriceSpan = await price?.$(".andes-money-amount__fraction");
+    const realPrice =
+      (await realPriceSpan?.evaluate((el) => el.innerHTML)) || "";
+
     const linkDiv = await item.$("a");
     const link =
       (await linkDiv?.evaluate((el) => el.getAttribute("href"))) || "";
-    products.push({ price, link });
+
+    const hasOriginalPrice = await item.$(
+      ".andes-money-amount.ui-search-price__original-value"
+    );
+
+    if (hasOriginalPrice) {
+      const originalPriceSpan = await hasOriginalPrice.$(
+        ".andes-money-amount__fraction"
+      );
+      const originalPrice =
+        (await originalPriceSpan?.evaluate((el) => el.innerHTML)) || "";
+
+      products.push({
+        link,
+        discountPrice: realPrice,
+        originalPrice,
+        hasDiscount: true,
+      });
+      continue;
+    }
+
+    products.push({ price: realPrice, link, hasDiscount: false });
   }
 
-  console.log(`Successfully scraped products of page ${pageNumber}!`);
+  console.log(`Successfully scraped products of page ${pageNumber + 1}!`);
+}
+
+function getProductPrice(product: Products) {
+  return product.hasDiscount
+    ? Number(product.discountPrice?.replace(".", "") || 0)
+    : Number(product.price.replace(".", ""));
+}
+
+function getProductOriginalPrice(product: Products) {
+  if (!product.hasDiscount) {
+    return 0;
+  }
+  return Number(product.originalPrice.replace(".", ""));
+}
+
+function getDiscountPercentage(price: number, originalPrice: number) {
+  return `${((1 - price / originalPrice) * 100).toFixed(0)}%`;
 }
 
 async function main() {
@@ -69,12 +118,12 @@ async function main() {
 
     let pageNumber = 0;
     while (true) {
-      await page.waitForSelector(".ui-search-layout.ui-search-layout--grid");
+      await page.waitForSelector(".ui-search-results");
       await getItemPrices(pageNumber, page, products);
       const nextButton = await page.$(".andes-pagination__button--next");
       if (!nextButton) {
         console.log("No next button found");
-        continue;
+        break;
       }
       if (
         await nextButton.evaluate((el) =>
@@ -90,17 +139,34 @@ async function main() {
     }
 
     products.sort((a, b) => {
-      if (!a.price || !b.price) return 0;
-      return (
-        Number(a.price.replace(".", "")) - Number(b.price.replace(".", ""))
-      );
+      const priceA = getProductPrice(a);
+      const priceB = getProductPrice(b);
+
+      return priceA - priceB;
     });
     const productsText = products
       .map((product) => {
+        if (!product.link) {
+          return;
+        }
         const productPrice = new Intl.NumberFormat("pt-BR", {
           style: "currency",
           currency: "BRL",
-        }).format(Number(product.price?.replace(".", "")) || 0);
+        }).format(getProductPrice(product));
+
+        if (product.hasDiscount) {
+          const productOriginalPrice = new Intl.NumberFormat("pt-BR", {
+            style: "currency",
+            currency: "BRL",
+          }).format(getProductOriginalPrice(product));
+
+          return `Price (discount - ${getDiscountPercentage(
+            getProductPrice(product),
+            getProductOriginalPrice(product)
+          )}): ${productPrice}, Original Price: ${productOriginalPrice}, Link: ${
+            product.link
+          }`;
+        }
 
         return `Price: ${productPrice}, Link: ${product.link}`;
       })
