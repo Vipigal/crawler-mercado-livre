@@ -17,4 +17,4 @@ Ele retorna todos os precos e links de um certo produto (de todas as paginas) or
 
 1. Clone o repositório:
 2. Instale as dependencias com um `npm install`
-3. Rode o crawler com o comando npx `ts-node crawler.ts --product {nome do produto a ser Buscado, ex: iPad}`
+3. Rode o crawler com o comando npx `npx ts-node crawler.ts --product {nome do produto a ser Buscado, ex: iPad}` ou com o comando `npm run crawler "{nome do Produto}"`
