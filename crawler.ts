@@ -117,6 +117,7 @@ async function main() {
     const products: Products[] = [];
 
     let pageNumber = 0;
+    console.log("Starting scraping... Please wait");
     const startScrapingTime = process.hrtime();
     while (true) {
       await page.waitForSelector(".ui-search-results");
